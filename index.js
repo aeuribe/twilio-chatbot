@@ -6,6 +6,7 @@ const cors = require("cors");
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use(express.urlencoded({ extended: true }));
 
 // Ruta de prueba para verificar que el servidor está activo
 app.get("/", (req, res) => {
@@ -27,6 +28,7 @@ app.post('/api/webhook', (req, res) => {
   const mensajeRecibido = req.body.Body; // Obtiene el mensaje del usuario
   let respuesta = '';
 
+  console.log(mensajeRecibido)
   if (mensajeRecibido === '1') {
     respuesta = 'Has seleccionado Agendar cita. Por favor, espera a que un agente te atienda.';
   } else if (mensajeRecibido === '2') {
