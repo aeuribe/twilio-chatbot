@@ -57,7 +57,6 @@ async function sendTwilioMessage({ to, body, contentSid, contentVariables }) {
 // Tu Webhook
 app.post('/api/webhook', (req, res) => {
   console.log('Cuerpo de la solicitud:', req.body); 
-  const itemIDSeleccionado = req.body.ListPickerReply.ItemID;
   const mensajeRecibido = req.body.Body; // Obtiene el mensaje del usuario
   let respuesta = '';
 
