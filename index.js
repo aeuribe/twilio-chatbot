@@ -22,37 +22,80 @@ const twilioNumber = process.env.TWILIO_PHONE_NUMBER;
 const client = twilio(accountSid, authToken);
 
 console.log('Definiendo la ruta /api/webhook...');
+
+// Función para enviar mensajes con Twilio
+async function sendTwilioMessage({ to, body, contentSid, contentVariables }) {
+  try {
+    const messageOptions = {
+      from: 'whatsapp:+14155238886', // Tu número de WhatsApp configurado en Twilio
+      to: to,
+    };
+
+    // Si se proporciona un template (contentSid), lo usamos
+    if (contentSid) {
+      messageOptions.contentSid = contentSid;
+
+      // Si hay variables dinámicas para el template, las agregamos
+      if (contentVariables) {
+        messageOptions.contentVariables = JSON.stringify(contentVariables);
+      }
+    } else {
+      // Si no hay template, enviamos un mensaje simple con "body"
+      messageOptions.body = body;
+    }
+
+    // Enviar el mensaje usando Twilio
+    const message = await client.messages.create(messageOptions);
+    console.log(`✅ Mensaje enviado con SID: ${message.sid}`);
+    return message.sid; // Retornamos el SID del mensaje enviado
+  } catch (error) {
+    console.error(`❌ Error al enviar el mensaje: ${error.message}`);
+    throw error; // Re-lanzamos el error para manejarlo en otro lugar si es necesario
+  }
+}
+
 // Tu Webhook
 app.post('/api/webhook', (req, res) => {
-  console.log('Cuerpo de la solicitud:', req.body); // Agrega 
+  console.log('Cuerpo de la solicitud:', req.body); 
+  const itemIDSeleccionado = req.body.ListPickerReply.ItemID;
   const mensajeRecibido = req.body.Body; // Obtiene el mensaje del usuario
   let respuesta = '';
 
-  console.log(mensajeRecibido)
-  if (mensajeRecibido === '1') {
-    respuesta = 'Has seleccionado Agendar cita. Por favor, espera a que un agente te atienda.';
-  } else if (mensajeRecibido === '2') {
-    respuesta = 'Has seleccionado Consultar disponibilidad. Nuestros horarios son de Lunes a Viernes de 9am a 5pm.';
-  } else if (mensajeRecibido === '3') {
-    respuesta = 'Has seleccionado Cancelar cita. Por favor, proporciona el número de confirmación de tu cita.';
-  } else {
-    respuesta = '¡Bienvenido a nuestro servicio de gestión de citas!\n\n' +
-                'Selecciona una opción:\n\n' +
-                '1. Agendar cita\n' +
-                '2. Consultar disponibilidad\n\n' +
-                '3. Cancelar cita';
-  }
+  // switch (itemIDSeleccionado){
+  //   case 'option1':
+  //     respuesta = "Has seleccionado la opcion Agendar una Cita";
+  //     //logica
+  //     break;
+  //   case 'option2':
+  //     respuesta = "Has seleccionado Consultar Disponibilidad";
+  //     //logica
+  //     break;
+  //   case 'option3':
+  //     respuesta = "Has seleccionado Reprogramar Cita";
+  //     //logica
+  //     break;
+  //   case 'option4':
+  //     respuesta = "Has seleccionado Cancelar Cita";
+  //     //logica
+  //     break;
+  //   default:
+  //     respuesta = 'Opción inválida. Por favor, elige una opción válida.';
+  // }
 
   // Envía la respuesta usando la API de Twilio
-  client.messages
-  .create({
-      to: 'whatsapp:+584242077190',
-      from: 'whatsapp:+14155238886',
-      body: respuesta
-  })
-  .then(message => console.log(`Mensaje enviado con SID: ${message.sid}`))
-  .catch(error => console.error(`Error al enviar el mensaje: ${error}`));
+  // client.messages
+  // .create({
+  //             from: 'whatsapp:+14155238886',
+  //     contentSid: 'HX0922bf754951c3c70e63ed7c66b551a1',
+  //     to: 'whatsapp:+584242077190'
+  // })
+  //  .then(message => console.log(`Mensaje enviado con SID: ${message.sid}`))
+  //  .catch(error => console.error(`Error al enviar el mensaje: ${error}`));
 
+  sendTwilioMessage({
+    to: 'whatsapp:+584242077190',
+    contentSid: "HX0922bf754951c3c70e63ed7c66b551a1", // Reemplaza con el Content SID del template para agendar citas
+  });
 res.status(200).send('Mensaje recibido');
 
 });
