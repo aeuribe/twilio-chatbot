@@ -24,15 +24,12 @@ const client = twilio(accountSid, authToken);
 // Objeto para guardar los estados de los usuarios
 const userStates = {};
 
-// Funcion para obtener el estado de un usuario
-function getUserState(userId){
-  return userStates[userId] || {currentStates: 'initial'}; // Retorna el estado o uno inicial si no existe
+// Funcion para establecer el estado de un usuario 
+function setUserState(userId, states) {
+  userStates[userId] = states; // Guarda el nuevo estado del usuario
 }
 
-// Funcion para establecer el estado de un usuario 
-function setUserStates(userId, states) {
-  userStates[userId] = state; // Guarda el nuevo estado del usuario
-}
+
 
 console.log('Definiendo la ruta /api/webhook...');
 
@@ -68,7 +65,7 @@ async function sendTwilioMessage({ to, body, contentSid, contentVariables }) {
 }
 
 // Tu Webhook
-app.post('/api/webhook', (req, res) => {
+app.post('/api/webhook', async (req, res) => {
   console.log('Cuerpo de la solicitud:', req.body); 
   
 
@@ -78,41 +75,52 @@ app.post('/api/webhook', (req, res) => {
 
   // Obtiene el numero del usuario
   const userId = req.body.From;
-  
-  // Obtiene el estado actual del usuario
-  const userState = getUserState(userId);
+  const business = req.body.To;
   let respuesta = '';
 
-
-  if (!userState[userId]) {
-    userState[userId] = { currentState: 'initial'};
+  console.log('users:', userStates);
+  if (!userStates[userId]) {
+    userStates[userId] = { currentState: 'initial'};
   }
 
-  console.log('userState:',userState[userId].currentState);
+  console.log('userStates:',userStates[userId].currentState);
   console.log('userId:',userId);
+  console.log('business:',business);
   
-  switch (userState[userId].currentState){
+  switch (userStates[userId].currentState){
     case 'initial':
       // Logica para presentar opciones
-      sendTwilioMessage({
-        to: 'whatsapp:+584242077190',
-        contentSid: "HX0922bf754951c3c70e63ed7c66b551a1", // Reemplaza con el Content SID del template para agendar citas
-      });
+      // sendTwilioMessage({
+      //   to: 'whatsapp:+584242077190',
+      //   contentSid: "HX243ca7c9228ef8661cee4a02f67df640", // Reemplaza con el Content SID del template para agendar citas
+      // });
 
-      userState[userId].currentState = 'selectingOptionFromMenu';
+      setUserState(userId, { currentState:'selectingOptionFromMenu'} )
+      console.log('current userState:',userStates[userId].currentState);
+      console.log('usuarios:',userStates);
+      
       break;
 
     case 'selectingOptionFromMenu':
       if (mensajeRecibido === 'option1'){
-        respuesta = "Has seleccionado la opcion Agendar una Cita"
+        respuesta = "Has seleccionado la opcion Agendar una Cita. Rellena este formulario para registrar tu cita!"
+        console.log('respuesta:',respuesta);
+        
+        
 
-        sendTwilioMessage({
-          to: 'whatsapp:+584242077190',
-          Body: respuesta, // Reemplaza con el Content SID del template para agendar citas
-        });
 
-        userState[userId].currentState = 'booking';
-      }
+          setUserState(userId, { currentState: 'booking' });
+          console.log('current userState:', userStates[userId].currentState);
+
+          console.error(`Error al obtener datos o enviar mensaje: ${error.message}`);
+          res.status(500).send('Error al obtener datos o enviar mensaje');
+      
+  }
+      break;
+    
+    case 'booking':
+      console.log("Has seleccionado la opcion:",mensajeRecibido);
+      console.log('current userState:',userStates[userId].currentState);
   }
 
   // switch (mensajeRecibido){
