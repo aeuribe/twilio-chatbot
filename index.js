@@ -10,6 +10,7 @@ app.use(cors());
 app.use(express.urlencoded({ extended: true }));
 
 // Ruta de prueba para verificar que el servidor está activo
+
 app.get("/", (req, res) => {
   res.send("🚀 API funcionando correctamente!");
 });
@@ -64,7 +65,7 @@ async function sendTwilioMessage({ to, body, contentSid, contentVariables }) {
 }
 
 function extractPhoneNumber(twilioTo) {
-  return twilioTo.replace(/^(whatsapp:|sms:)?\+/, '');
+  return twilioTo.replace(/^(whatsapp:|sms:)?\+/, "");
 }
 
 // Tu Webhook
@@ -76,7 +77,8 @@ app.post("/api/webhook", async (req, res) => {
   console.log("Mensaje recibido:", mensajeRecibido);
 
   // Obtiene el numero del usuario
-  const userId = req.body.From;
+  const user = req.body.From;
+  const userId = extractPhoneNumber(user);
   const number = req.body.To || ""; // Asegurar que siempre sea una cadena
   const business = extractPhoneNumber(number);
 
@@ -105,40 +107,53 @@ app.post("/api/webhook", async (req, res) => {
 
       break;
 
-      case "selectingOptionFromMenu":
-        if (mensajeRecibido === "option1") {
-          try {
-            const businessId = await getBusinessIdByNumber(business);
-      
-            if (!businessId) {
-              console.warn(`No se encontró un negocio con el número: ${business}`);
-              await sendTwilioMessage({
-                to: userId,
-                body: "Lo sentimos, no encontramos un negocio asociado a este número.",
-              });
-              return res.status(404).send("Negocio no encontrado.");
-            }
-      
-            respuesta = `Ingresa a este link para agendar una cita: \nhttps://localhost:5173/appointment-form?business_id=${businessId}`;
+    case "selectingOptionFromMenu":
+      if (mensajeRecibido === "option1") {
+        try {
+          const businessId = await getBusinessIdByNumber(business);
 
-            console.log("respuesta:", respuesta);
-      
-            setUserState(userId, { currentState: "booking" });
-      
-            // Enviar respuesta al usuario (descomentar para Twilio)
-            await sendTwilioMessage({ to: userId, body: respuesta });
-      
-            return res.status(200).send(respuesta);
-          } catch (error) {
-            console.error(`Error al obtener datos o enviar mensaje: ${error.message}`);
-            await sendTwilioMessage({
-              to: userId,
-              body: "Hubo un error al procesar tu solicitud. Inténtalo más tarde.",
-            });
-            return res.status(500).send("Error al obtener datos o enviar mensaje");
+          if (!businessId) {
+            console.warn(
+              `No se encontró un negocio con el número: ${business}`
+            );
+            // await sendTwilioMessage({
+            //   to: userId,
+            //   body: "Lo sentimos, no encontramos un negocio asociado a este número.",
+            // });
+            return res.status(404).send("Negocio no encontrado.");
           }
+
+          respuesta = `Ingresa a este link para agendar una cita: \nhttps://localhost:5173/appointment-form?business_id=${businessId}&number=${userId}`;
+
+          console.log("respuesta:", respuesta);
+
+          setUserState(userId, { currentState: "booking" });
+
+          // Enviar respuesta al usuario (descomentar para Twilio)
+          // await sendTwilioMessage({ to: userId, body: respuesta });
+
+          return res.status(200).send(respuesta);
+        } catch (error) {
+          console.error(
+            `Error al obtener datos o enviar mensaje: ${error.message}`
+          );
+          // await sendTwilioMessage({
+          //   to: userId,
+          //   body: "Hubo un error al procesar tu solicitud. Inténtalo más tarde.",
+          // });
+          return res
+            .status(500)
+            .send("Error al obtener datos o enviar mensaje");
         }
-        break;
+      } else if (mensajeRecibido === "option2") {
+
+        respuesta = `Ingresa a este enlace para reprogramar tu cita: \nhttps://localhost:5173/reschedule-form?business_id=${businessId}&number=${userId}`;
+
+        console.log("respuesta:", respuesta);
+
+        return res.status(200).send(respuesta);
+      }
+      break;
 
     case "booking":
       console.log("Has seleccionado la opcion:", mensajeRecibido);
